@@ -20,6 +20,12 @@ public class IndexController {
         return "success";
     }
 
+    @RequestMapping("/test")
+    public String testController(){
+//        stringRedisTemplate.opsForValue().set("stock", "300");
+        return "success";
+    }
+
     /**
      * 原始版本，并发时会有超卖问题
      * @return
