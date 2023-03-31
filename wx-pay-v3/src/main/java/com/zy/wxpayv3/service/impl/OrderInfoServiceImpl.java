@@ -12,6 +12,7 @@ import com.zy.wxpayv3.util.OrderNoUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.List;
 
 @Service
 public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo> implements OrderInfoService {
@@ -59,5 +60,13 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         //正式的项目中，应该还加一个判断条件是当前用户
         OrderInfo orderInfo = baseMapper.selectOne(queryWrapper);
         return orderInfo;
+    }
+
+    @Override
+    public List<OrderInfo> listOrderByCreateTimeDesc() {
+        LambdaQueryWrapper<OrderInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByDesc(OrderInfo::getCreateTime);
+        List<OrderInfo> orderInfos = baseMapper.selectList(queryWrapper);
+        return orderInfos;
     }
 }
