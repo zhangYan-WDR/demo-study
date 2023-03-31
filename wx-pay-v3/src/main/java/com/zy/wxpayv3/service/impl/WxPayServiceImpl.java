@@ -3,11 +3,10 @@ package com.zy.wxpayv3.service.impl;
 import com.google.gson.Gson;
 import com.zy.wxpayv3.config.WxPayConfig;
 import com.zy.wxpayv3.entity.OrderInfo;
-import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.enums.wxpay.WxApiType;
 import com.zy.wxpayv3.enums.wxpay.WxNotifyType;
+import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.service.WxPayService;
-import com.zy.wxpayv3.util.OrderNoUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -15,6 +14,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -31,16 +31,23 @@ public class WxPayServiceImpl implements WxPayService {
     @Resource
     private CloseableHttpClient wxPayClient;
 
+    @Resource
+    private OrderInfoService orderInfoService;
+
     @Override
     public Map<String, Object> nativePay(Long productId) throws Exception {
-        //生成订单
-        OrderInfo orderInfo = new OrderInfo();
-        orderInfo.setTitle("test");
-        orderInfo.setOrderNo(OrderNoUtils.getOrderNo());
-        orderInfo.setProductId(productId);
-        orderInfo.setTotalFee(1);
-        orderInfo.setOrderStatus(OrderStatus.NOTPAY.getType());
-        //入库
+
+        OrderInfo orderInfo = orderInfoService.createOrderByProductId(productId);
+
+        //防止一直调用微信统一下单API
+        String codeUrl = orderInfo.getCodeUrl();
+        if (orderInfo != null && !StringUtils.isEmpty(codeUrl)) {
+            log.info("订单已存在,二维码已保存");
+            Map<String, Object> map = new HashMap<>();
+            map.put("codeUrl", codeUrl);
+            map.put("orderNo", orderInfo.getOrderNo());
+            return map;
+        }
 
         log.info("调用统一下单API");
         //调用统一下单API
@@ -79,7 +86,10 @@ public class WxPayServiceImpl implements WxPayService {
                 throw new IOException("请求失败");
             }
             Map<String,String> resultMap = gson.fromJson(bodyAsString, HashMap.class);
-            String codeUrl = resultMap.get("code_url");
+            codeUrl = resultMap.get("code_url");
+            //将二维码保存入库
+            //TODO 二维码有效期为2小时，设置二维码有效期
+            orderInfoService.saveCodeUrl(orderInfo.getOrderNo(),codeUrl);
 
             Map<String, Object> map = new HashMap<>();
             map.put("codeUrl", codeUrl);

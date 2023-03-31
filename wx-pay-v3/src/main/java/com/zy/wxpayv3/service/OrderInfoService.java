@@ -5,4 +5,7 @@ import com.zy.wxpayv3.entity.OrderInfo;
 
 public interface OrderInfoService extends IService<OrderInfo> {
 
+    OrderInfo createOrderByProductId(Long productId);
+
+    void saveCodeUrl(String orderNo, String codeUrl);
 }
