@@ -4,10 +4,7 @@ import com.zy.wxpayv3.entity.OrderInfo;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.vo.R;
 import io.swagger.annotations.Api;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -26,5 +23,10 @@ public class OrderController {
         List<OrderInfo> orderInfos = orderInfoService.listOrderByCreateTimeDesc();
         return R.ok().data("list", orderInfos);
     }
+
+//    @GetMapping("/query-order-status/{orderNo}")
+//    public R queryOrder(@PathVariable("orderNo") String orderNo){
+//        return R.ok();
+//    }
 
 }

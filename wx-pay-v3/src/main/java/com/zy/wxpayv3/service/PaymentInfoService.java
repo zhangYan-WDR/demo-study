@@ -5,4 +5,5 @@ import com.zy.wxpayv3.entity.PaymentInfo;
 
 public interface PaymentInfoService extends IService<PaymentInfo> {
 
+    void createPaymentInfo(String plainText);
 }

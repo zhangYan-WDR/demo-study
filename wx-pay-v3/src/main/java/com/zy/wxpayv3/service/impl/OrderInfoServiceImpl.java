@@ -9,12 +9,14 @@ import com.zy.wxpayv3.mapper.OrderInfoMapper;
 import com.zy.wxpayv3.mapper.ProductMapper;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.util.OrderNoUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.List;
 
 @Service
+@Slf4j
 public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo> implements OrderInfoService {
 
     @Resource
@@ -68,5 +70,20 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
         queryWrapper.orderByDesc(OrderInfo::getCreateTime);
         List<OrderInfo> orderInfos = baseMapper.selectList(queryWrapper);
         return orderInfos;
+    }
+
+    /**
+     * 根据订单号更新订单状态
+     * @param orderNo
+     * @param success
+     */
+    @Override
+    public void updateStatusByOrderNo(String orderNo, OrderStatus orderStatus) {
+        log.info("更新订单状态为--->{}",orderStatus.getType());
+        LambdaQueryWrapper<OrderInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(OrderInfo::getOrderNo, orderNo);
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setOrderStatus(orderStatus.getType());
+        baseMapper.update(orderInfo, queryWrapper);
     }
 }

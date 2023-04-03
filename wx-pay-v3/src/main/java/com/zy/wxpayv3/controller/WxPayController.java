@@ -1,8 +1,10 @@
 package com.zy.wxpayv3.controller;
 
 import com.google.gson.Gson;
+import com.wechat.pay.contrib.apache.httpclient.auth.Verifier;
 import com.zy.wxpayv3.service.WxPayService;
 import com.zy.wxpayv3.util.HttpUtils;
+import com.zy.wxpayv3.util.WechatPay2ValidatorForRequest;
 import com.zy.wxpayv3.vo.R;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -25,6 +27,9 @@ public class WxPayController {
     @Resource
     private WxPayService wxPayService;
 
+    @Resource
+    private Verifier verifier;
+
     @ApiOperation("调用统一下单API，生成支付二维码")
     @PostMapping("/native/{productId}")
     public R nativePay(@PathVariable("productId") Long productId) throws Exception {
@@ -40,35 +45,38 @@ public class WxPayController {
         Gson gson = new Gson();
         Map<String, String> map = new HashMap<>();//创建应答对象
 
-        String body = HttpUtils.readData(request);
-        Map<String,Object> bodyMap = gson.fromJson(body, HashMap.class);
-        log.info("支付回调通知的id==={}",bodyMap.get("id"));
-        log.info("支付回调通知的完整报文为==={}",body);
-        /**
-         * {
-         *     "id":"76388f27-4aa5-5496-905c-96959606dae2",
-         *     "create_time":"2023-03-31T16:53:06+08:00",
-         *     "resource_type":"encrypt-resource",
-         *     "event_type":"TRANSACTION.SUCCESS",
-         *     "summary":"支付成功",
-         *     "resource":{
-         *         "original_type":"transaction",
-         *         "algorithm":"AEAD_AES_256_GCM",
-         *         "ciphertext":"H7mcmifQ4RIMKy8jukcCB98uYgGoHGm5whLUbuBRDb1uTWpTW+8qhKEQgTBuEq5d49+IufuS0vTxBA29fGDOnD1DJH5PAuPniAsMWjsSNUrEV3u7BCdqPBF/R6IR7jTzNz0tU1CPMwphV1m89nxqSlXMOW0ZpFSydC2IOHBallRKK4wWODjsoJWG1bXYZHFWKcm3z7x858SBTJfYZHxhn8VHnzwsv/+sh8PsPxSjEZQD8aDSrQbjyajxeX02qimdMeiypjo+zJ4ELIbmtPSYm0go8VfGLjvJTxg77a3n/2Bv/2Dfu3wJ5IvZp+kaYOrzLh9Yh4HWLgnRQcmYrYlqoHryAWEfQ7yFuK3zqnCEjJC+P4ihBgKa29+ysoQAjJ3FkIIq8GkITeeSVhKfbbyZpHeEkjhfXcz7kDmhmBdkX//VBZAIndoqAIygf7/q4zRenaMg+FNrirnrIM2BmjWBJPiOXDzrEbfRFTDzx8mxUwrL3SvCIiTUxIAWNPrJUqlPXXne+dybdA75z6/Pg2IDzE2LMVoVlSFFxN3xuEdddB8Qz6t17/Lu8/7R38u02FkbWsvn+3t0Dw==",
-         *         "associated_data":"transaction",
-         *         "nonce":"x4GTK3C0VrH5"
-         *     }
-         * }
-         */
+        try {
+            String body = HttpUtils.readData(request);
+            Map<String,Object> bodyMap = gson.fromJson(body, HashMap.class);
+            String requestId = (String) bodyMap.get("id");
+            log.info("支付回调通知的id==={}",requestId);
+            //签名验证
+            WechatPay2ValidatorForRequest wechatPay2ValidatorForRequest = new WechatPay2ValidatorForRequest(verifier, requestId, body);
+            if (!wechatPay2ValidatorForRequest.validate(request)) {
+                log.error("通知验签失败");
+                response.setStatus(500);
+                map.put("code", "FAIL");
+                map.put("message","通知验签失败");
+                return gson.toJson(map);
+            }
+            log.info("通知验签成功");
+            //TODO : 处理订单信息
+            wxPayService.processOrder(bodyMap);
 
-        //TODO : 签名验证
-        //TODO : 处理订单信息
+            response.setStatus(200);
+            //现在返回成功不需要返回应答报文
+            map.put("code", "SUCCESS");
+            map.put("message","成功");
+            return gson.toJson(map);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setStatus(500);
+            //现在返回成功不需要返回应答报文
+            map.put("code", "FAIL");
+            map.put("message","失败");
+            return gson.toJson(map);
+        }
 
-        response.setStatus(200);
-        //现在返回成功不需要返回应答报文
-        map.put("code", "SUCCESS");
-        map.put("message","成功");
-        return gson.toJson(map);
     }
 
 }

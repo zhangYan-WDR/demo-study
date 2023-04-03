@@ -1,11 +1,14 @@
 package com.zy.wxpayv3.service.impl;
 
 import com.google.gson.Gson;
+import com.wechat.pay.contrib.apache.httpclient.util.AesUtil;
 import com.zy.wxpayv3.config.WxPayConfig;
 import com.zy.wxpayv3.entity.OrderInfo;
+import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.enums.wxpay.WxApiType;
 import com.zy.wxpayv3.enums.wxpay.WxNotifyType;
 import com.zy.wxpayv3.service.OrderInfoService;
+import com.zy.wxpayv3.service.PaymentInfoService;
 import com.zy.wxpayv3.service.WxPayService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -18,6 +21,8 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,6 +38,9 @@ public class WxPayServiceImpl implements WxPayService {
 
     @Resource
     private OrderInfoService orderInfoService;
+
+    @Resource
+    private PaymentInfoService paymentInfoService;
 
     @Override
     public Map<String, Object> nativePay(Long productId) throws Exception {
@@ -98,5 +106,38 @@ public class WxPayServiceImpl implements WxPayService {
         } finally {
             response.close();
         }
+    }
+
+    @Override
+    public void processOrder(Map<String, Object> bodyMap) throws GeneralSecurityException {
+        log.info("处理订单");
+        String plainText = decryptFromResorce(bodyMap);
+        //将明文转化为map
+        Gson gson = new Gson();
+        Map plainTextMap = gson.fromJson(plainText, HashMap.class);
+        String orderNo = (String) plainTextMap.get("out_trade_no");
+        //更改订单状态
+        orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.SUCCESS);
+        //记录支付日志
+        paymentInfoService.createPaymentInfo(plainText);
+    }
+
+    /**
+     * 对称解密
+     * 将微信回调返回的信息进行相同的算法进行解密，拿到报文返回的明文数据
+     * @param bodyMap
+     * @return
+     */
+    private String decryptFromResorce(Map<String, Object> bodyMap) throws GeneralSecurityException {
+        log.info("开始进行微信回调返回的密文解密");
+        //微信解密需要aesUtil进行对密文解密，构造函数需要一个byte类型的密钥
+        AesUtil aesUtil = new AesUtil(wxPayConfig.getApiV3Key().getBytes(StandardCharsets.UTF_8));
+        Map<String,String> resource = (Map<String, String>) bodyMap.get("resource");
+        String ciphertext = resource.get("ciphertext");
+        String nonce = resource.get("nonce");
+        String associatedData = resource.get("associated_data");
+        String plainText = aesUtil.decryptToString(associatedData.getBytes(StandardCharsets.UTF_8), nonce.getBytes(StandardCharsets.UTF_8), ciphertext);
+        log.info("解密后的明文为--->{},密文为--->{}",plainText,ciphertext);
+        return plainText;
     }
 }
