@@ -79,4 +79,12 @@ public class WxPayController {
 
     }
 
+    @PostMapping("/cancel/{orderNo}")
+    public R cancel(@PathVariable("orderNo") String orderNo) throws Exception {
+        log.info("取消订单");
+        wxPayService.cancelOrder(orderNo);
+        return R.ok().setMessage("订单已取消");
+    }
+
+
 }

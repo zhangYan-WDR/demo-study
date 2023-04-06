@@ -159,4 +159,48 @@ public class WxPayServiceImpl implements WxPayService {
         log.info("解密后的明文为--->{},密文为--->{}",plainText,ciphertext);
         return plainText;
     }
+
+
+    /**
+     * 取消订单接口
+     * @param orderNo
+     */
+    @Override
+    public void cancelOrder(String orderNo) throws Exception {
+        //1.调用微信关单接口
+        this.closeOrder(orderNo);
+        //2.处理客户端订单状态
+        orderInfoService.updateStatusByOrderNo(orderNo,OrderStatus.CANCEL);
+    }
+
+    private void closeOrder(String orderNo) throws Exception {
+        //调用native关单接口
+        log.info("调用微信关单接口 订单号为--->{}",orderNo);
+        String cancelUrl = String.format(WxApiType.CLOSE_ORDER_BY_NO.getType(), orderNo);
+        HttpPost httpPost = new HttpPost(wxPayConfig.getDomain().concat(cancelUrl));
+        // 请求body参数
+        Gson gson = new Gson();
+        Map paramsMap = new HashMap();
+        paramsMap.put("mchid",wxPayConfig.getMchId());
+        String reqdata = gson.toJson(paramsMap);
+        log.info("请求参数:{}",reqdata);
+        StringEntity entity = new StringEntity(reqdata,"utf-8");
+        entity.setContentType("application/json");
+        httpPost.setEntity(entity);
+        httpPost.setHeader("Accept", "application/json");
+
+        //完成签名并执行请求
+        CloseableHttpResponse response = wxPayClient.execute(httpPost);
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode == 204) { //处理成功，无返回Body
+                log.info("成功");
+            } else {
+                log.info("失败,响应码 = " + statusCode);
+                throw new IOException("请求失败");
+            }
+        } finally {
+            response.close();
+        }
+    }
 }
