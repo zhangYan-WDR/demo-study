@@ -230,4 +230,15 @@ public class WxPayServiceImpl implements WxPayService {
             response.close();
         }
     }
+
+    /**
+     * 根据订单号查询微信支付查单接口，核实订单状态
+     * 如果订单已支付，更新商户端的订单状态
+     * 如果订单未支付，则调用关单接口关闭订单，并更新客户端的订单状态
+     * @param orderNo
+     */
+    @Override
+    public void checkOrderStatus(String orderNo) {
+
+    }
 }
