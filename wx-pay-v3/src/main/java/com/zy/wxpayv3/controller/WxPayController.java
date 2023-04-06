@@ -33,30 +33,30 @@ public class WxPayController {
     @ApiOperation("调用统一下单API，生成支付二维码")
     @PostMapping("/native/{productId}")
     public R nativePay(@PathVariable("productId") Long productId) throws Exception {
-      log.info("发起支付请求");
-      //返回支付二维码连接和订单号
-      Map<String,Object> map = wxPayService.nativePay(productId);
-      return R.ok().setData(map);
+        log.info("发起支付请求");
+        //返回支付二维码连接和订单号
+        Map<String, Object> map = wxPayService.nativePay(productId);
+        return R.ok().setData(map);
     }
 
     @PostMapping("/native/notify")
-    public String nativeNotify(HttpServletRequest request, HttpServletResponse response){
+    public String nativeNotify(HttpServletRequest request, HttpServletResponse response) {
 
         Gson gson = new Gson();
         Map<String, String> map = new HashMap<>();//创建应答对象
 
         try {
             String body = HttpUtils.readData(request);
-            Map<String,Object> bodyMap = gson.fromJson(body, HashMap.class);
+            Map<String, Object> bodyMap = gson.fromJson(body, HashMap.class);
             String requestId = (String) bodyMap.get("id");
-            log.info("支付回调通知的id==={}",requestId);
+            log.info("支付回调通知的id==={}", requestId);
             //签名验证
             WechatPay2ValidatorForRequest wechatPay2ValidatorForRequest = new WechatPay2ValidatorForRequest(verifier, requestId, body);
             if (!wechatPay2ValidatorForRequest.validate(request)) {
                 log.error("通知验签失败");
                 response.setStatus(500);
                 map.put("code", "FAIL");
-                map.put("message","通知验签失败");
+                map.put("message", "通知验签失败");
                 return gson.toJson(map);
             }
             log.info("通知验签成功");
@@ -66,14 +66,14 @@ public class WxPayController {
             response.setStatus(200);
             //现在返回成功不需要返回应答报文
             map.put("code", "SUCCESS");
-            map.put("message","成功");
+            map.put("message", "成功");
             return gson.toJson(map);
         } catch (Exception e) {
             e.printStackTrace();
             response.setStatus(500);
             //现在返回成功不需要返回应答报文
             map.put("code", "FAIL");
-            map.put("message","失败");
+            map.put("message", "失败");
             return gson.toJson(map);
         }
 
@@ -86,5 +86,9 @@ public class WxPayController {
         return R.ok().setMessage("订单已取消");
     }
 
-
+    @GetMapping("/query/{orderNo}")
+    public R queryOrder(@PathVariable("orderNo") String orderNo) throws Exception {
+        String result = wxPayService.queryOrder(orderNo);
+        return R.ok().setMessage("查询成功").data("result", result);
+    }
 }

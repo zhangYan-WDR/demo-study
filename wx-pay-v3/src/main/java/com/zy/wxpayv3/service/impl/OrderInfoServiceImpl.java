@@ -90,6 +90,7 @@ public class OrderInfoServiceImpl extends ServiceImpl<OrderInfoMapper, OrderInfo
     @Override
     public String getOrderStatus(String orderNo) {
         LambdaQueryWrapper<OrderInfo> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(OrderInfo::getOrderNo, orderNo);
         OrderInfo orderInfo = baseMapper.selectOne(queryWrapper);
         if (orderInfo == null) {
             return null;
