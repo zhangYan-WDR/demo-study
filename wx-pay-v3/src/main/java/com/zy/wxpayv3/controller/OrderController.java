@@ -1,6 +1,7 @@
 package com.zy.wxpayv3.controller;
 
 import com.zy.wxpayv3.entity.OrderInfo;
+import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.vo.R;
 import io.swagger.annotations.Api;
@@ -24,9 +25,18 @@ public class OrderController {
         return R.ok().data("list", orderInfos);
     }
 
-//    @GetMapping("/query-order-status/{orderNo}")
-//    public R queryOrder(@PathVariable("orderNo") String orderNo){
-//        return R.ok();
-//    }
+    /**
+     * 查询订单状态
+     * @param orderNo
+     * @return
+     */
+    @GetMapping("/query-order-status/{orderNo}")
+    public R queryOrderStatus(@PathVariable("orderNo") String orderNo){
+        String orderStatus = orderInfoService.getOrderStatus(orderNo);
+        if (OrderStatus.SUCCESS.getType().equals(orderStatus)) {
+            return R.ok().setMessage("支付成功");
+        }
+        return R.ok().setCode(101).setMessage("支付中......");
+    }
 
 }

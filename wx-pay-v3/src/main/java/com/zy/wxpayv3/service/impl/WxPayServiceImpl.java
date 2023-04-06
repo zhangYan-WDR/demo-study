@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -41,6 +42,8 @@ public class WxPayServiceImpl implements WxPayService {
 
     @Resource
     private PaymentInfoService paymentInfoService;
+
+    private final ReentrantLock lock = new ReentrantLock();
 
     @Override
     public Map<String, Object> nativePay(Long productId) throws Exception {
@@ -116,15 +119,26 @@ public class WxPayServiceImpl implements WxPayService {
         Gson gson = new Gson();
         Map plainTextMap = gson.fromJson(plainText, HashMap.class);
         String orderNo = (String) plainTextMap.get("out_trade_no");
-        //防止通知被一直执行，处理重复的通知
-        String orderStatus = orderInfoService.getOrderStatus(orderNo);
-        if (!OrderStatus.NOTPAY.getType().equals(orderStatus)) {
-            return;
+        /**
+         * 在对业务数据进行状态检查和处理之前
+         * 要采用数据锁进行并发控制
+         * 以避免函数重入造成的数据混乱
+         */
+        if (lock.tryLock()) {
+            try {
+                //防止通知被一直执行，处理重复的通知
+                String orderStatus = orderInfoService.getOrderStatus(orderNo);
+                if (!OrderStatus.NOTPAY.getType().equals(orderStatus)) {
+                    return;
+                }
+                //更改订单状态
+                orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.SUCCESS);
+                //记录支付日志
+                paymentInfoService.createPaymentInfo(plainText);
+            }finally {
+                lock.unlock();
+            }
         }
-        //更改订单状态
-        orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.SUCCESS);
-        //记录支付日志
-        paymentInfoService.createPaymentInfo(plainText);
     }
 
     /**
