@@ -4,12 +4,15 @@ import com.google.gson.Gson;
 import com.wechat.pay.contrib.apache.httpclient.util.AesUtil;
 import com.zy.wxpayv3.config.WxPayConfig;
 import com.zy.wxpayv3.entity.OrderInfo;
+import com.zy.wxpayv3.entity.RefundInfo;
 import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.enums.wxpay.WxApiType;
 import com.zy.wxpayv3.enums.wxpay.WxNotifyType;
+import com.zy.wxpayv3.enums.wxpay.WxRefundStatus;
 import com.zy.wxpayv3.enums.wxpay.WxTradeState;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.service.PaymentInfoService;
+import com.zy.wxpayv3.service.RefundInfoService;
 import com.zy.wxpayv3.service.WxPayService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -44,6 +47,9 @@ public class WxPayServiceImpl implements WxPayService {
 
     @Resource
     private PaymentInfoService paymentInfoService;
+
+    @Resource
+    private RefundInfoService refundInfoService;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -260,5 +266,53 @@ public class WxPayServiceImpl implements WxPayService {
             orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.CLOSED);
         }
 
+    }
+
+    @Override
+    public void refund(String orderNo, String reason) throws Exception {
+        //创建一个退款单记录
+        RefundInfo refundInfo = refundInfoService.createRefundByOrderNo(orderNo,reason);
+        log.info("调用退款API");
+        //调用统一下单API
+        HttpPost httpPost = new HttpPost(wxPayConfig.getDomain().concat(WxApiType.DOMESTIC_REFUNDS.getType()));
+        // 请求body参数
+        Gson gson = new Gson();
+        Map paramsMap = new HashMap();
+        paramsMap.put("out_trade_no",orderNo);
+        paramsMap.put("reason",reason);
+        paramsMap.put("notify_url",wxPayConfig.getNotifyDomain().concat(WxNotifyType.REFUND_NOTIFY.getType()));
+        HashMap amountMap = new HashMap();
+        amountMap.put("refund", refundInfo.getRefund());
+        amountMap.put("total", refundInfo.getTotalFee());
+        amountMap.put("currency", "CNY");
+        paramsMap.put("amount",amountMap);
+        String reqdata = gson.toJson(paramsMap);
+        log.info("退款请求参数:{}",reqdata);
+        StringEntity entity = new StringEntity(reqdata,"utf-8");
+        entity.setContentType("application/json");
+        httpPost.setEntity(entity);
+        httpPost.setHeader("Accept", "application/json");
+
+        //完成签名并执行请求
+        CloseableHttpResponse response = wxPayClient.execute(httpPost);
+
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            String bodyAsString = EntityUtils.toString(response.getEntity());
+            if (statusCode == 200) { //处理成功
+                log.info("成功,返回结果 = " + bodyAsString);
+            } else if (statusCode == 204) { //处理成功，无返回Body
+                log.info("成功");
+            } else {
+                log.info("失败,响应码 = " + statusCode+ ",响应体 = " + bodyAsString);
+                throw new IOException("请求失败");
+            }
+            //更新订单状态
+            orderInfoService.updateStatusByOrderNo(orderNo,OrderStatus.REFUND_PROCESSING);
+            //更新退款单信息
+            refundInfoService.updateRefund(bodyAsString);
+        } finally {
+            response.close();
+        }
     }
 }

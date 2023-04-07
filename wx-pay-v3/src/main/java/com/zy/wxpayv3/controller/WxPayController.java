@@ -60,7 +60,7 @@ public class WxPayController {
                 return gson.toJson(map);
             }
             log.info("通知验签成功");
-            //TODO : 处理订单信息
+            //处理订单信息
             wxPayService.processOrder(bodyMap);
 
             response.setStatus(200);
@@ -90,5 +90,12 @@ public class WxPayController {
     public R queryOrder(@PathVariable("orderNo") String orderNo) throws Exception {
         String result = wxPayService.queryOrder(orderNo);
         return R.ok().setMessage("查询成功").data("result", result);
+    }
+
+    @PostMapping("/refunds/{orderNo}/{reason})")
+    public R refunds(@PathVariable("orderNo") String orderNo,@PathVariable("reason") String reason) throws Exception {
+        log.info("退款申请 --->{}",orderNo);
+        wxPayService.refund(orderNo,reason);
+        return R.ok().setMessage("退款成功");
     }
 }
