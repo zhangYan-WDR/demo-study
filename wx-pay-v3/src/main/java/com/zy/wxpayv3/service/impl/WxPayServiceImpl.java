@@ -8,7 +8,6 @@ import com.zy.wxpayv3.entity.RefundInfo;
 import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.enums.wxpay.WxApiType;
 import com.zy.wxpayv3.enums.wxpay.WxNotifyType;
-import com.zy.wxpayv3.enums.wxpay.WxRefundStatus;
 import com.zy.wxpayv3.enums.wxpay.WxTradeState;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.service.PaymentInfoService;
@@ -311,6 +310,33 @@ public class WxPayServiceImpl implements WxPayService {
             orderInfoService.updateStatusByOrderNo(orderNo,OrderStatus.REFUND_PROCESSING);
             //更新退款单信息
             refundInfoService.updateRefund(bodyAsString);
+        } finally {
+            response.close();
+        }
+    }
+
+    @Override
+    public String queryRefund(String refundNo) throws Exception{
+
+        //调用native查询订单接口
+        log.info("调用微信查询退款单信息 退款单号为--->{}",refundNo);
+        String queryUrl = String.format(WxApiType.DOMESTIC_REFUNDS_QUERY.getType(), refundNo);
+        HttpGet httpGet = new HttpGet(wxPayConfig.getDomain().concat(queryUrl));
+        httpGet.setHeader("Accept", "application/json");
+        //完成签名并执行请求
+        CloseableHttpResponse response = wxPayClient.execute(httpGet);
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            String bodyAsString = EntityUtils.toString(response.getEntity());
+            if (statusCode == 200) { //处理成功
+                log.info("成功,返回结果 = " + bodyAsString);
+            } else if (statusCode == 204) { //处理成功，无返回Body
+                log.info("成功");
+            } else {
+                log.info("失败,响应码 = " + statusCode+ ",响应体 = " + bodyAsString);
+                throw new IOException("请求失败");
+            }
+            return bodyAsString;
         } finally {
             response.close();
         }

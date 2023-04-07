@@ -98,4 +98,11 @@ public class WxPayController {
         wxPayService.refund(orderNo,reason);
         return R.ok().setMessage("退款成功");
     }
+
+    @GetMapping("/query-refunds/{refundNo})")
+    public R queryRefund(@PathVariable("refundNo") String refundNo) throws Exception {
+        log.info("查询退款订单 退款单编号为--->{}",refundNo);
+        String result = wxPayService.queryRefund(refundNo);
+        return R.ok().setMessage("查询退款成功").data("result",result);
+    }
 }
