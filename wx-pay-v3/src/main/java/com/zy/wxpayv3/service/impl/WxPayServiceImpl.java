@@ -7,6 +7,7 @@ import com.zy.wxpayv3.entity.OrderInfo;
 import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.enums.wxpay.WxApiType;
 import com.zy.wxpayv3.enums.wxpay.WxNotifyType;
+import com.zy.wxpayv3.enums.wxpay.WxTradeState;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.service.PaymentInfoService;
 import com.zy.wxpayv3.service.WxPayService;
@@ -207,7 +208,7 @@ public class WxPayServiceImpl implements WxPayService {
 
     @Override
     public String queryOrder(String orderNo) throws Exception {
-        //调用native关单接口
+        //调用native查询订单接口
         log.info("调用微信查询订单接口 订单号为--->{}",orderNo);
         String queryUrl = String.format(WxApiType.ORDER_QUERY_BY_NO.getType(), orderNo);
         HttpGet httpGet = new HttpGet(wxPayConfig.getDomain().concat(queryUrl).concat("?mchid=").concat(wxPayConfig.getMchId()));
@@ -238,7 +239,26 @@ public class WxPayServiceImpl implements WxPayService {
      * @param orderNo
      */
     @Override
-    public void checkOrderStatus(String orderNo) {
+    public void checkOrderStatus(String orderNo) throws Exception {
+        String result = queryOrder(orderNo);
+        Gson gson = new Gson();
+        Map<String,Object> resultMap = gson.fromJson(result, Map.class);
+        String tradeState = (String) resultMap.get("trade_state");
+        if (WxTradeState.SUCCESS.getType().equals(tradeState)) {
+            log.warn("核实订单已经支付，===>{}",orderNo);
+            //更新本地订单状态
+            orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.SUCCESS);
+            //记录支付日志
+            paymentInfoService.createPaymentInfo(result);
+            return;
+        }
+        if (WxTradeState.NOTPAY.getType().equals(tradeState)) {
+            log.warn("核实订单未支付,===>{}", orderNo);
+            //如果订单为支付，则调用关单接口，更新本地订单状态
+            this.closeOrder(orderNo);
+
+            orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.CLOSED);
+        }
 
     }
 }
