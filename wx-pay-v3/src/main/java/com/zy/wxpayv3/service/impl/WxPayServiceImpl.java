@@ -42,6 +42,9 @@ public class WxPayServiceImpl implements WxPayService {
     private CloseableHttpClient wxPayClient;
 
     @Resource
+    private CloseableHttpClient wxPayNoSignClient;
+
+    @Resource
     private OrderInfoService orderInfoService;
 
     @Resource
@@ -403,6 +406,31 @@ public class WxPayServiceImpl implements WxPayService {
             Gson gson = new Gson();
             Map<String,String> resultMap = gson.fromJson(bodyAsString, HashMap.class);
             return resultMap.get("download_url");
+        } finally {
+            response.close();
+        }
+    }
+
+    @Override
+    public String downloadBill(String billDate, String type) throws Exception {
+        log.info("调用下载账单接口 {} {}",billDate,type);
+        String downloadUrl = this.queryBill(billDate, type);
+        HttpGet httpGet = new HttpGet(downloadUrl);
+        httpGet.setHeader("Accept", "application/json");
+        //完成签名并执行请求
+        CloseableHttpResponse response = wxPayNoSignClient.execute(httpGet);
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            String bodyAsString = EntityUtils.toString(response.getEntity());
+            if (statusCode == 200) { //处理成功
+                log.info("成功,返回结果 = " + bodyAsString);
+            } else if (statusCode == 204) { //处理成功，无返回Body
+                log.info("成功");
+            } else {
+                log.info("失败,响应码 = " + statusCode+ ",响应体 = " + bodyAsString);
+                throw new IOException("请求失败");
+            }
+            return bodyAsString;
         } finally {
             response.close();
         }

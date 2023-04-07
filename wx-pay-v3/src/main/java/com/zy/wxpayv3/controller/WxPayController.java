@@ -154,4 +154,12 @@ public class WxPayController {
         String downloadUrl = wxPayService.queryBill(billDate, type);
         return R.ok().setMessage("查询成功").data("downloadUrl", downloadUrl);
     }
+
+    @ApiOperation("下载账单")
+    @GetMapping("/downloadbill/{billDate}/{type}")
+    public R downloadBill(@PathVariable("billDate") String billDate,@PathVariable("type") String type) throws Exception {
+        log.info("下载账单");
+        String result = wxPayService.downloadBill(billDate, type);
+        return R.ok().data("result", result);
+    }
 }
