@@ -372,4 +372,39 @@ public class WxPayServiceImpl implements WxPayService {
             }
         }
     }
+
+    @Override
+    public String queryBill(String billDate, String type) throws Exception {
+        log.warn("申请账单接口调用 {}",billDate);
+        String url = "";
+        if ("tradebill".equals(type)) {
+            url = WxApiType.TRADE_BILLS.getType();
+        } else if ("fundflowbill".equals(type)) {
+            url = WxApiType.FUND_FLOW_BILLS.getType();
+        } else {
+            throw new RuntimeException("当前不支持的账单类型");
+        }
+        url = wxPayConfig.getDomain().concat(url).concat("?bill_date=").concat(billDate);
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.setHeader("Accept", "application/json");
+        //完成签名并执行请求
+        CloseableHttpResponse response = wxPayClient.execute(httpGet);
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            String bodyAsString = EntityUtils.toString(response.getEntity());
+            if (statusCode == 200) { //处理成功
+                log.info("成功,返回结果 = " + bodyAsString);
+            } else if (statusCode == 204) { //处理成功，无返回Body
+                log.info("成功");
+            } else {
+                log.info("失败,响应码 = " + statusCode+ ",响应体 = " + bodyAsString);
+                throw new IOException("请求失败");
+            }
+            Gson gson = new Gson();
+            Map<String,String> resultMap = gson.fromJson(bodyAsString, HashMap.class);
+            return resultMap.get("download_url");
+        } finally {
+            response.close();
+        }
+    }
 }

@@ -93,17 +93,17 @@ public class WxPayController {
     }
 
     @PostMapping("/refunds/{orderNo}/{reason}")
-    public R refunds(@PathVariable("orderNo") String orderNo,@PathVariable("reason") String reason) throws Exception {
-        log.info("退款申请 --->{}",orderNo);
-        wxPayService.refund(orderNo,reason);
+    public R refunds(@PathVariable("orderNo") String orderNo, @PathVariable("reason") String reason) throws Exception {
+        log.info("退款申请 --->{}", orderNo);
+        wxPayService.refund(orderNo, reason);
         return R.ok().setMessage("退款成功");
     }
 
     @GetMapping("/query-refunds/{refundNo}")
     public R queryRefund(@PathVariable("refundNo") String refundNo) throws Exception {
-        log.info("查询退款订单 退款单编号为--->{}",refundNo);
+        log.info("查询退款订单 退款单编号为--->{}", refundNo);
         String result = wxPayService.queryRefund(refundNo);
-        return R.ok().setMessage("查询退款成功").data("result",result);
+        return R.ok().setMessage("查询退款成功").data("result", result);
     }
 
     @PostMapping("/refunds/notify")
@@ -145,5 +145,13 @@ public class WxPayController {
             return gson.toJson(map);
         }
 
+    }
+
+    @ApiOperation("获取账单url，测试用")
+    @GetMapping("/querybill/{billDate}/{type}")
+    public R queryTradeBill(@PathVariable("billDate") String billDate,@PathVariable("type") String type) throws Exception {
+        log.info("获取账单url");
+        String downloadUrl = wxPayService.queryBill(billDate, type);
+        return R.ok().setMessage("查询成功").data("downloadUrl", downloadUrl);
     }
 }

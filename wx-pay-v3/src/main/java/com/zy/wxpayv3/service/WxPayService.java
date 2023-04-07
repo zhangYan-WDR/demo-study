@@ -19,4 +19,6 @@ public interface WxPayService {
     String queryRefund(String refundNo) throws Exception;
 
     void processRefund(Map<String, Object> bodyMap) throws GeneralSecurityException;
+
+    String queryBill(String billDate, String type) throws Exception;
 }

@@ -4,7 +4,6 @@ import com.zy.wxpayv3.entity.OrderInfo;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.service.WxPayService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
@@ -27,7 +26,7 @@ public class WxPayTask {
     /**
      * 从0秒开始,每30秒查询创建超过五分钟并且没有支付的订单
      */
-    @Scheduled(cron = "0/30 * * * * ?")
+//    @Scheduled(cron = "0/30 * * * * ?")
     public void orderConfirm() throws Exception {
         //TODO 应该使用消息队列进行超时订单的判断
         log.info("orderConfirm 被执行。。。");
