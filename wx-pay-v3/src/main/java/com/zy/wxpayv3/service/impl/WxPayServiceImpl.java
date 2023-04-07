@@ -278,6 +278,7 @@ public class WxPayServiceImpl implements WxPayService {
         Gson gson = new Gson();
         Map paramsMap = new HashMap();
         paramsMap.put("out_trade_no",orderNo);
+        paramsMap.put("out_refund_no",refundInfo.getRefundNo());
         paramsMap.put("reason",reason);
         paramsMap.put("notify_url",wxPayConfig.getNotifyDomain().concat(WxNotifyType.REFUND_NOTIFY.getType()));
         HashMap amountMap = new HashMap();
@@ -339,6 +340,36 @@ public class WxPayServiceImpl implements WxPayService {
             return bodyAsString;
         } finally {
             response.close();
+        }
+    }
+
+    @Override
+    public void processRefund(Map<String, Object> bodyMap) throws GeneralSecurityException {
+        log.info("订单进行退款");
+        String plainText = decryptFromResorce(bodyMap);
+        //将明文转化为map
+        Gson gson = new Gson();
+        Map plainTextMap = gson.fromJson(plainText, HashMap.class);
+        String orderNo = (String) plainTextMap.get("out_trade_no");
+        /**
+         * 在对业务数据进行状态检查和处理之前
+         * 要采用数据锁进行并发控制
+         * 以避免函数重入造成的数据混乱
+         */
+        if (lock.tryLock()) {
+            try {
+                //防止通知被一直执行，处理重复的通知
+                String orderStatus = orderInfoService.getOrderStatus(orderNo);
+                if (!OrderStatus.REFUND_PROCESSING.getType().equals(orderStatus)) {
+                    return;
+                }
+                //更改订单状态
+                orderInfoService.updateStatusByOrderNo(orderNo, OrderStatus.REFUND_SUCCESS);
+                //记录支付日志
+                refundInfoService.updateRefund(plainText);
+            }finally {
+                lock.unlock();
+            }
         }
     }
 }
