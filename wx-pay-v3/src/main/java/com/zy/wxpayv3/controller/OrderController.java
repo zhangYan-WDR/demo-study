@@ -5,6 +5,7 @@ import com.zy.wxpayv3.enums.OrderStatus;
 import com.zy.wxpayv3.service.OrderInfoService;
 import com.zy.wxpayv3.vo.R;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -30,6 +31,7 @@ public class OrderController {
      * @param orderNo
      * @return
      */
+    @ApiOperation("查询订单状态")
     @GetMapping("/query-order-status/{orderNo}")
     public R queryOrderStatus(@PathVariable("orderNo") String orderNo){
         String orderStatus = orderInfoService.getOrderStatus(orderNo);
