@@ -2,7 +2,7 @@ package com.zy.wxpay.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
 import com.github.wxpay.sdk.WXPayUtil;
-import com.zy.wxpay.service.WxPayService;
+import com.zy.wxpay.service.Wx2PayService;
 import com.zy.wxpay.util.HttpClient;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class WxPayServiceImpl implements WxPayService {
+public class Wx2PayServiceImpl implements Wx2PayService {
 
     @Override
     public Map<String, Object> createNative(String orderNo) {

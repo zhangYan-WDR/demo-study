@@ -1,7 +1,7 @@
 package com.zy.wxpay.controller;
 
 import com.zy.wxpay.restful.AppResponse;
-import com.zy.wxpay.service.WxPayService;
+import com.zy.wxpay.service.Wx2PayService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,15 +15,15 @@ import java.util.Map;
 @RequestMapping("wxPay")
 @RestController
 @Api(value = "微信支付相关接口", tags = "微信支付相关接口")
-public class WxPayController {
+public class Wx2PayController {
 
     @Autowired
-    private WxPayService wxPayService;
+    private Wx2PayService wx2PayService;
 
     @ApiOperation(value = "根据订单编号生成支付二维码")
     @GetMapping("createNative/{orderNo}")
     public AppResponse createNative(@PathVariable String orderNo){
-        Map<String,Object> map= wxPayService.createNative(orderNo);
+        Map<String,Object> map= wx2PayService.createNative(orderNo);
         return AppResponse.success("获取成功",map);
     }
 
@@ -31,7 +31,7 @@ public class WxPayController {
     @ApiOperation(value = "根据订单编号查询支付状态")
     public AppResponse queryPayStatus(@PathVariable String orderNo) {
         //1调用微信接口查询支付状态
-        Map<String, String> map = wxPayService.queryPayStatus(orderNo);
+        Map<String, String> map = wx2PayService.queryPayStatus(orderNo);
         //2判断支付状态
         if (map == null) {
             return AppResponse.bizError("支付出错");
@@ -49,7 +49,7 @@ public class WxPayController {
     @ApiOperation(value = "根据订单编号申请退款")
     public AppResponse refund(@PathVariable String orderNo) {
         //1调用微信接口查询支付状态
-        Map<String, String> map = wxPayService.refund(orderNo);
+        Map<String, String> map = wx2PayService.refund(orderNo);
         //2判断支付状态
         if (map == null) {
             return AppResponse.bizError("支付出错");
